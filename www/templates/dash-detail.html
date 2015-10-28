@@ -4,19 +4,20 @@
   The FriendsCtrl pulls data from the Friends service (service.js)
   The Friends service returns an array of friend data
 -->
-<ion-view view-title="push to central">
+
+<ion-view view-title="subject attendance">
   <ion-content class="padding">
-  <div class="buttons" align-title="right">
-    <button class="button" ng-click="update()">update</button>
+  	<div class="buttons" align-title="right">
+    <button class="button" ng-click="local()">Push</button>
   </div>
-     <ul class="list">
-  <li class="item item-checkbox" ng-repeat="stud in students">
+    <ul class="list">
+  <li class="item item-checkbox" ng-repeat="student in students">
      <label class="checkbox">
-       <input type="checkbox" ng-model="stud.active">
+       <input type="checkbox" ng-model="student.active">
      </label>
-     {{stud.name}}
+     {{student.name}}
   </li>
 </ul>
-<pre ng-bind="students | json"></pre>
+ <pre ng-bind="subjects | json"></pre> 
   </ion-content>
 </ion-view>
