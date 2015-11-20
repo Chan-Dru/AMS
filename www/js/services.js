@@ -1,36 +1,174 @@
 angular.module('starter.services', [])
 
-.factory('LoginFactory',function(){
-  var faculty = [{
-    id:1,
-    name:"chan",
-    password:"pass",
-    subject:["CS402","CS305"],
-  },{
-    id:2,
-    name:"sid",
-    password:"sid",
-    subject:["EC305","CS405"],
-  }];
-  var subjectList=[];
-  return {
-        loginUser: function(name, pw) {
-          subjectList=[];
-          for(var i =0;i<faculty.length;i++){
-            if((faculty[i].name == name) && (faculty[i].password == pw) ){
-              subjectList = faculty[i].subject;
-              return true;
-            }
+.service('LocalFactory',function($cordovaSQLite,$window,LocalDb){
+  return{
+    getarray: function(st){
+      return st.split(",");
+    },
+    setstudentlist : function(student){
+      var studentlist=[];
+      for(var i=0;i<student.length;i++){
+        studentlist.push({name:student[i],active:true});
+      }
+      return studentlist;
+    },
+    savelocal: function(studentattd,subjectname){
+      var currentdate = new Date(); 
+      var datetime = currentdate.getDate() + "/"
+                      + (currentdate.getMonth()+1)  + "/" 
+                      + currentdate.getFullYear() + " @ "  
+                      + currentdate.getHours() + ":"  
+                      + currentdate.getMinutes() + ":" 
+                      + currentdate.getSeconds();
+      //push date to the subject in push table
+       console.log(datetime);
+      // console.log(subjectname);
+      var d = this.dateparse(datetime);
+      var query4 = "SELECT * FROM "+subjectname;
+      console.log(studentattd);
+      $cordovaSQLite.execute(db,query4).then(function(res){
+        console.log(res.rows.length);
+        var count = res.rows.length;
+        if( count == 0){
+          var total = studentattd.length;
+          var query2 = "INSERT INTO "+subjectname+" (rowid) VALUES (?)";
+          //console.log(query2);
+          var t=[];
+          for(var n=1;n<total;n++){
+            var query2 =query2+",(?)";
+            t.push(n);
           }
-          return false;
-        },
-        getList: function(){
-          return subjectList;
+          t.push(n);
+         console.log(t);
+          $cordovaSQLite.execute(db,query2,t);
+          console.log("first time no students "+new Date());
         }
+
+      //push date to the subject in push table
+      var query = "INSERT INTO "+subjectname+"_push (dates,dateid) VALUES (?,?)";
+      $cordovaSQLite.execute(db,query,[datetime,d]);
+      LocalDb.insert(subjectname,datetime,d);
+      //add datetime column in subject table
+      var query = "ALTER TABLE "+subjectname+" ADD COLUMN "+d+" text";
+      $cordovaSQLite.execute(db,query);
+        console.log("create column "+new Date());
+      //insert attendance in datetime column in subject table
+     // console.log(studentattd.length);
+      var query = "UPDATE "+subjectname+" SET "+d+" = (?) WHERE rowid = (?)";
+      for(var i=1;i<=studentattd.length;i++){
+        //console.log(studentattd[i-1].active);
+        $cordovaSQLite.execute(db,query,[studentattd[i-1].active,i]);
+        console.log("insert in date column "+new Date());
+      }
+      });
+    },
+    dateparse: function(date){
+      return "d"+date.replace(/[^a-z0-9\s]/gi, '').replace(/ /g,'');
+    }
+  };
+})
+
+.service('InitialFactory',function($q,$cordovaSQLite,$window,$http){
+  return{
+    initial: function(uid){
+      var deferred = $q.defer();
+      var promise = deferred.promise;
+      $http.get('http://localhost:2403/faculty/'+uid
+        ).success(function(data){
+          console.log(data.subject);
+          var studentlist = [];
+          $window.localStorage.setItem("faculty_subject",data.subject);
+          for(var i=0;i<data.subject.length;i++){
+            var query = "CREATE TABLE IF NOT EXISTS "+data.subject[i]+" (rollno text)";
+            $cordovaSQLite.execute(db,query);
+            var query1 = "CREATE TABLE IF NOT EXISTS "+data.subject[i]+"_push (dates text,dateid text)"
+            $cordovaSQLite.execute(db,query1);
+            //get student list in deptyear
+            var sub = data.subject[i].substring(0,3);
+            var subject = data.subject[i];
+            //console.log(subject);
+            var count;
+             if($window.localStorage.getItem(sub) == null){ //check if student list already exists
+                $http.get('http://localhost:2403/student',{params:{deptyear:sub}
+              }).success(function(result){
+                $window.localStorage.setItem(sub,result[0].list1);
+                deferred.resolve("ok");
+              }).error(function(err){
+                console.log("error in student name list");
+                deferred.reject("no");
+              });
+            }else{
+              deferred.resolve("ok");
+            }
+          };              
+        }).error(function(err){
+              deferred.reject(false);        
+          });
+        promise.success = function(fn) {
+            promise.then(fn);
+            return promise;
+        }
+        promise.error = function(fn) {
+            promise.then(null, fn);
+            return promise;
+        }
+        return promise;
+    } 
+  }
+})
+
+.factory('LoginFactory',function($http,$q,$window){
+  return {
+      loginUser: function(name, pw) {
+        var deferred = $q.defer();
+        var promise = deferred.promise;
+        var set = $window.localStorage.getItem("faculty_name")
+        if(set == null){
+          $http.post('http://localhost:2403/faculty/login',{
+            username: name,
+            password: pw
+          }).success(function(data){
+              console.log("new user");
+              $window.localStorage.setItem("faculty_name",name);
+              $window.localStorage.setItem("faculty_pass",pw);
+              deferred.resolve(data.uid);
+          }).error(function(err){
+              deferred.reject(false);        
+          });
+        }else{
+          var pass = $window.localStorage.getItem('faculty_pass');
+          var user = $window.localStorage.getItem('faculty_name'); 
+          if(user == name && pass == pw){
+            console.log("already in");
+            deferred.resolve(false);
+          }else{
+            $http.post('http://localhost:2403/faculty/login',{
+              username: name,
+              password: pw
+            }).success(function(data){
+                console.log("different user");
+                $window.localStorage.setItem("faculty_name",name);
+                $window.localStorage.setItem("faculty_pass",pw);
+                deferred.resolve(data.uid);
+            }).error(function(err){
+                deferred.reject(false);        
+            });
+          }
+        }
+        promise.success = function(fn) {
+            promise.then(fn);
+            return promise;
+        }
+        promise.error = function(fn) {
+            promise.then(null, fn);
+            return promise;
+        }
+        return promise;
+      }
     }
 })
 
-.factory('LocalDb',function(){
+.factory('LocalDb',function($ionicPlatform,$cordovaSQLite,$window){
   var subjectAttd = [{
     name:"CS402",
     attendance:[{
@@ -76,27 +214,83 @@ angular.module('starter.services', [])
     }],
     strength:[2,4],
   }];
+  var subjectAttd1 =[];
+  var t =1;
   return{
+    set1 : function(){
+        console.log(t++);
+        var sub = $window.localStorage.getItem("faculty_subject");
+        var subject = sub.split(",");
+        subject.forEach(function(element,index){
+          subjectAttd1.push({name:element,attendance:[]});
+          console.log(element);
+          var query4 = "SELECT * FROM "+element+"_push";
+            $cordovaSQLite.execute(db,query4).then(function(res){
+              j=0;
+              
+              //t.forEach(function(ele,ind){
+              while(j<res.rows.length){
+                d = res.rows[j].dateid;
+                subjectAttd1[index].attendance.push({dateid:d,dates:res.rows[j].dates,student:[]});
+                console.log(res.rows[j].dateid);
+                j++;
+                console.log(subject[index]);
+                
+            //  });
+              }
+            });
+        });
+        // console.log(subjectAttd1);
+        // var query2 = "SELECT * FROM CS402 where rowid = '1'";
+        //         $cordovaSQLite.execute(db,query2).then(function(data){
+        //             // k=0;
+        //             // while(k<data.rows.length){
+        //             //     console.log(element);
+        //             //     console.log(data.rows.item(k)[d]);  
+        //             //     k++;
+        //             // }
+        //             for (var prop in data.rows[0]) {
+        //                   console.log(prop);
+        //                   console.log(data.rows.item(0)[prop]);
+        //               }
+        //         });
+
+    },
     set : function(student,subject){
      var k;
       for(var i=0;i<subjectAttd.length;i++){
         if(subject == subjectAttd[i].name){
           k = subjectAttd[i].attendance.length;
           var date = new Date();
-          var id = date.toUTCString();;
+          //var id = date.toUTCString();
           var year = date.getFullYear();
           var month = date.getMonth()+1;
           var day = date.getDate();
           var mytime = new Date().toTimeString().replace(/.*(\d{2}:\d{2}:\d{2}).*/, "$1");
-          subjectAttd[i].attendance.push({id:id,year:year,month:month,date:day,time:mytime,student:[]})
+          subjectAttd[i].attendance.push({id:mytime,year:year,month:month,date:day,time:mytime,student:[]})
          for(var j=0;j<student.length;j++)
            subjectAttd[i].attendance[k].student.push(student[j].active);
         }
       }
 
     },
+    insert : function(subject,datetime,d){
+      var sub = $window.localStorage.getItem("faculty_subject");
+      var query = "SELECT * FROM "+subject+"_push";
+      for(var i=0;i<subjectAttd1.length;i++){
+        if(subject == subjectAttd1[i].name){
+          subjectAttd1[i].attendance.push({dates:datetime,dateid:d,student:[]});
+        }
+      }
+      console.log(subjectAttd1);
+      // $cordovaSQLite.execute(db,query).then(function(res){
+      //     var l = res.rows.length - 1;
+      //     console.log(res.rows);
+      
+      // });
+    },
     all : function(){
-      return subjectAttd;
+      return subjectAttd1;
     },
     getStudent : function(id,subject){
       for(var i=0;i<subjectAttd.length;i++){
@@ -185,7 +379,6 @@ angular.module('starter.services', [])
     getSubject: function(){
       return currentSubject;
     }
-
   };
   })
 

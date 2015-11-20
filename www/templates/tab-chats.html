@@ -4,7 +4,8 @@
       <ion-item class="item-remove-animate item-icon-right" ng-repeat="subject in subjects" type="item-text-wrap" >
       <h2>{{subject.name}}</h2>
       <div>{{subject.attendance.length}}</div>
-        <ion-item ng-repeat="attendance in subject.attendance" href="#/tab/chats/{{attendance.id}}" ng-click="tab(subject.name)">{{attendance.id}}
+        <ion-item ng-repeat="attendance in subject.attendance" href="#/tab/chats/{{attendance.id}}" ng-click="tab(subject.name)">{{attendance.dates}}
+        <button >Push</button>
         </ion-item>
       </ion-item>
     </ion-list>

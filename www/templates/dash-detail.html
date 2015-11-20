@@ -5,16 +5,17 @@
   The Friends service returns an array of friend data
 -->
 
-<ion-view view-title="subject attendance">
+<ion-view view-title={{subject}}>
   <ion-content class="padding">
   	<div class="buttons" align-title="right">
-    <button class="button" ng-click="local()">Push</button>
+    <button class="button" ng-click="localsave()">Push</button>
   </div>
     <ul class="list">
   <li class="item item-checkbox" ng-repeat="student in students">
      <label class="checkbox">
        <input type="checkbox" ng-model="student.active">
      </label>
+     {{$index+1}}
      {{student.name}}
   </li>
 </ul>

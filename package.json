@@ -19,7 +19,11 @@
     "cordova-plugin-console",
     "cordova-plugin-splashscreen",
     "cordova-plugin-device",
-    "ionic-plugin-keyboard"
+    "ionic-plugin-keyboard",
+    {
+      "locator": "https://github.com/brodysoft/Cordova-SQLitePlugin",
+      "id": "cordova-sqlite-storage"
+    }
   ],
   "cordovaPlatforms": []
 }

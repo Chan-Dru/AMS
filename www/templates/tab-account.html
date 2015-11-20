@@ -1,11 +1,22 @@
 <ion-view view-title="Account">
   <ion-content>
     <ion-list>
-    <ion-toggle  ng-model="settings.enableFriends">
+    <!-- <ion-toggle  ng-model="settings.enableFriends">
         Enable Friends
-    </ion-toggle>
+    </ion-toggle> -->
     </ion-list>
     <button class="button button-block button-calm" ng-click="logout()">Logout</button>
     <div>{{data.active}}</div>
+    FirstName:<input type = "text" ng-model = "firstname">
+
+    LastName:<input type = "text" ng-model = "lastname">
+    
+    <button ng-click="insert(firstname,lastname)">INSERT</button>
+    <button ng-click="select(lastname)">SELECT LASTNAME</button>
+    {{f}}
+    {{l}}
+    <pre ng-bind="r | json"></pre>
+    <button ng-click="delete()">Delete DB</button>
+  
   </ion-content>
 </ion-view>
